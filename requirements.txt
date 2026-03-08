@@ -1,0 +1,6 @@
+sqlalchemy
+sqlalchemy-utils
+psycopg2-binary
+sqlacodegen-v2
+python-dotenv
+python-dateutil
