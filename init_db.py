@@ -4,7 +4,7 @@ import random
 import traceback
 from datetime import timedelta, date, datetime
 from multiprocessing import Pool
-# from random import randint, randrange
+
 
 import psycopg2
 from dotenv import load_dotenv
@@ -37,7 +37,9 @@ def run():
                         "\n1: luo tietokanta"
                         "\n2: populoi event_typet"
                         "\n3: populoi accountit"
-                        "\n4: populoi categoryt): ")
+                        "\n4: populoi categoryt"
+                        "\n5: populoi tilitapahtumat"
+                        "\n6: valitse tili ja generoi lisää satunnaisia tapahtumia): ")
         if _choice == "0":
             break
         elif _choice == "1":
@@ -49,10 +51,13 @@ def run():
         elif _choice == "4":
             _populate_categories()
         elif _choice == "5":
-            _populate_account_events()
-        elif _choice == "6":
             _clean_account_events()
             _populate_account_events()
+        elif _choice == "6":
+            _list_accounts()
+            _chosen_account = input("Valitse tili id:n perusteella: ")
+            _populate_account_with_random_events(int(_chosen_account))
+
 
 
 def _clean_account_events():
@@ -142,10 +147,23 @@ def _populate_account_with_random_events(_account_id):
         pool.map(_populate_month, tasks)
 
 
+def _list_accounts():
+    accounts = _get_accounts()
+    print("################## tilit ################\n")
+    for account in accounts:
+        print(f"{account[0]} - {account[1]}")
+
+def _get_accounts():
+    with get_pg_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM accounts")
+            accounts = cur.fetchall()
+            return accounts
 
 def _populate_account_events():
-    for account_id in [1, 2]:
-        _populate_account_with_random_events(account_id)
+    accounts = _get_accounts()
+    for account in accounts:
+        _populate_account_with_random_events(account[0])
 
 
 def _populate_categories():
