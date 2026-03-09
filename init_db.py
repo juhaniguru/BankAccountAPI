@@ -5,7 +5,6 @@ import traceback
 from datetime import timedelta, date, datetime
 from multiprocessing import Pool
 
-
 import psycopg2
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
@@ -59,7 +58,6 @@ def run():
             _populate_account_with_random_events(int(_chosen_account))
 
 
-
 def _clean_account_events():
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
@@ -67,14 +65,9 @@ def _clean_account_events():
             conn.commit()
 
 
-
 def _populate_month(args):
     import random
     fom, seconds_in_month, _account_id, num_of_events = args
-
-
-
-
 
     account_event_values = []
 
@@ -91,18 +84,20 @@ def _populate_month(args):
 
         category = random.randint(1, 3)
         account_event_values.append(
-            {'value': value, 'dt': dt, 'account_id': _account_id,'account_event_type_id': account_event_type, 'category_id': category})
-
+            {'value': value, 'dt': dt, 'account_id': _account_id, 'account_event_type_id': account_event_type,
+             'category_id': category})
 
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
             try:
-                execute_values(cur, "INSERT INTO account_events(value, dt, account_id, account_event_type_id, category_id) VALUES %s", account_event_values, template='(%(value)s, %(dt)s, %(account_id)s, %(account_event_type_id)s, %(category_id)s)')
+                execute_values(cur,
+                               "INSERT INTO account_events(value, dt, account_id, account_event_type_id, category_id) VALUES %s",
+                               account_event_values,
+                               template='(%(value)s, %(dt)s, %(account_id)s, %(account_event_type_id)s, %(category_id)s)')
                 conn.commit()
             except Exception as e:
                 conn.rollback()
                 traceback.print_exc()
-
 
 
 # Source - https://stackoverflow.com/a/30714165
@@ -115,11 +110,12 @@ def _is_leap_year(year):
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
 
 
-def _populate_account_with_random_events(_account_id):
+def _populate_account_with_random_events(_account_id, years_back=3):
     _now = datetime.now()
-    _start_date = _now - timedelta(days=365 * 3)
+    _start_date = _now - timedelta(days=365 * years_back)
+    _start_date = _start_date.replace(month=1)
     tasks = []
-    for month in range(3*12):
+    for month in range(years_back * 12):
         _date = _start_date + relativedelta(months=month)
 
         num_of_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -130,20 +126,13 @@ def _populate_account_with_random_events(_account_id):
 
         seconds_in_month = dim * 24 * 60 * 60
 
-
-
         num_of_events = random.randint(50, 200)
-
-
 
         tasks.append((first_of_month, seconds_in_month, _account_id, num_of_events))
 
-
-
-
     with Pool(processes=4) as pool:
         print("#################ALKAA#######################")
-        print(f"################# {tasks} ################")
+
         pool.map(_populate_month, tasks)
 
 
@@ -153,12 +142,14 @@ def _list_accounts():
     for account in accounts:
         print(f"{account[0]} - {account[1]}")
 
+
 def _get_accounts():
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM accounts")
             accounts = cur.fetchall()
             return accounts
+
 
 def _populate_account_events():
     accounts = _get_accounts()
