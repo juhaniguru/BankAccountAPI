@@ -2,6 +2,9 @@
 
 ## Ennakkovaatimukset
 - tarvitset Postgresin
+- kopioi .env.example
+- nimeä kopio .env:ksi
+- muuta muuttujien arvot .env-tiedostossa vastaamaan omaa Postgres-palvelintasi
 
 ## Luo virtualenv
 
