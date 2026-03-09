@@ -55,9 +55,11 @@ def run():
         elif _choice == "6":
             _list_accounts()
             _chosen_account = input("Valitse tili id:n perusteella: ")
+
             _populate_account_with_random_events(int(_chosen_account))
 
 
+# tyhjennetään account_events taulu
 def _clean_account_events():
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
@@ -65,6 +67,8 @@ def _clean_account_events():
             conn.commit()
 
 
+# funktio lisää num_of_eventsin verran
+# tapahtumia kuukaudelle arpoen tapahtuman aikaleiman
 def _populate_month(args):
     import random
     fom, seconds_in_month, _account_id, num_of_events = args
@@ -72,17 +76,24 @@ def _populate_month(args):
     account_event_values = []
 
     for i in range(num_of_events):
+        # arvotaan sekuntien määrä 0 - sekuntien määrä kuukaudessa
         random_second = random.randrange(seconds_in_month)
+        # lisätään arvottu sekuntimäärä kuukauden ensimmäiseeen päivään
+        # jolloin tuloksena on tapahtumalle satunnainen aikaleima
         dt = fom + timedelta(seconds=random_second)
         print(f"############### {dt:%Y-%m-%d %H:%M:%S%z} - {_account_id} ###############")
+        # satunnainen liukuluku väliltä 2-10 000
+        # pyöristetty 2 desimaalin tarkuuteen
         value = round(2 + 9998 * random.random(), 2)
         account_event_type = None
+        # account_event_type on 1 kahdessa tapauksessa kolmesta
         if random.random() < 0.66:
             account_event_type = 1
         else:
             account_event_type = 2
-
+        # arvotaan category_id
         category = random.randint(1, 3)
+        # laitetaan arvot dictionaryyn ja jokainen dict listaan
         account_event_values.append(
             {'value': value, 'dt': dt, 'account_id': _account_id, 'account_event_type_id': account_event_type,
              'category_id': category})
@@ -90,9 +101,17 @@ def _populate_month(args):
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
             try:
+                # esecute_values tekee BATCH INSERTIN
+                # esim. INSERT INTO event_values(value, dt, account_id, account_event_type_id, category_id)
+                # VALUES (2.4, 2023-01-01 00:00:00, 1, 1, 2),
+                # (4, 2023-01-01 05:23:00, 1, 1, 2);
+                # batch insertillä voi lisätä monta riviä yhdellä insertillä
                 execute_values(cur,
                                "INSERT INTO account_events(value, dt, account_id, account_event_type_id, category_id) VALUES %s",
                                account_event_values,
+                               # aiemmin olemme käyttäneet %s:ää
+                               # mutta nyt arvot ovat dictissä
+                               # ja käytämme siksi dictin avainta placeholderina
                                template='(%(value)s, %(dt)s, %(account_id)s, %(account_event_type_id)s, %(category_id)s)')
                 conn.commit()
             except Exception as e:
@@ -109,25 +128,42 @@ def _is_leap_year(year):
 
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
 
-
+# funktio arpoo tilille tilitapahtumia
+# _account_id on valitun tilin id tietokannassa
+# years_back määrittää aloituspäivän. Oletuksena 3 vuotta tästä päivästä taaksepäin
 def _populate_account_with_random_events(_account_id, years_back=3):
     _now = datetime.now()
     _start_date = _now - timedelta(days=365 * years_back)
+    # ilman tätä aloituspäivän kuukausi olisi sama kuin _now:n kuukausi
+    # aloitetaan tapahtumien lisääminen tammikuusta
     _start_date = _start_date.replace(month=1)
     tasks = []
+    # luupataan jokainen kuukausi läpi
     for month in range(years_back * 12):
+        # lisätään jokaisella kierroksella kuukausi aloituspäivämäärään
         _date = _start_date + relativedelta(months=month)
 
+        # päivien määrät kuukausissa
         num_of_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        # päivien määrä arvotun päivämäärän kuukaudessa (days_in_month)
         dim = num_of_days[_date.month - 1]
+        # jos kuukausi on helmikuu ja on karkausvuosi
+        # päiviä on 29
         if _date.month - 1 == 1 and _is_leap_year(_date.year):
             dim = 29
+
+        # arvotun vuoden ja kuukauden ensimmäinen päivä
+        # tätä tarvitaan myöhemmin, kun jokaiselle kuukauden tapahtumalle arvotaan
+        # aikaleima
         first_of_month = datetime(_date.year, _date.month, 1, hour=0, minute=0, second=0)
 
+        # lasketaan sekuntien määrä arvotun päivämäärän kuukaudessa
         seconds_in_month = dim * 24 * 60 * 60
 
+        # arvotaan tapahtumien määrä kuukaudessa 50 - 200
         num_of_events = random.randint(50, 200)
 
+        # lisätään parametrit taskien listaan moniajoa varten
         tasks.append((first_of_month, seconds_in_month, _account_id, num_of_events))
 
     with Pool(processes=4) as pool:
