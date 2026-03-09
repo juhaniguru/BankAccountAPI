@@ -20,3 +20,10 @@ def get_all(service: ABCAccountsService):
         })
 
     return jsonify(accounts_json)
+
+@inject_db_conn
+@inject_accounts_repo
+@inject_accounts_service
+def get_events(service: ABCAccountsService, account_id, dt, step):
+    events = service.get_events_by_account(account_id, dt, step)
+    return []
