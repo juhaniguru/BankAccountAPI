@@ -33,7 +33,7 @@ class AccountsPgRepository(AccountsRepository):
     def get_events_by_account_year_and_month(self, account_id: int, year: int, month: int):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("SELECT account_number, "
-                           "ROUND(AVG(value)::numeric,2) AS value, "
+                           "ROUND(AVG(value)::numeric,2)::float AS value, "
                            "EXTRACT(MONTH FROM dt) AS month, "
                            "EXTRACT(DAY FROM dt) AS day "
                            "FROM account_events AS ae "
@@ -52,7 +52,7 @@ class AccountsPgRepository(AccountsRepository):
         print(f"account_id: {account_id}, year: {year}, month: {month}, day: {day}")
         with self.conn.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("SELECT a.account_number, "
-                           "ROUND(AVG(value)::numeric,2) AS value,"
+                           "ROUND(AVG(value)::numeric,2)::float AS value,"
                            "EXTRACT(MONTH FROM dt) AS month,"
                            "EXTRACT(DAY FROM dt) AS day, "
                            "EXTRACT(HOUR FROM dt) AS hour "
