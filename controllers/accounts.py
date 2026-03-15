@@ -26,4 +26,4 @@ def get_all(service: ABCAccountsService):
 @inject_accounts_service
 def get_events(service: ABCAccountsService, account_id, dt, step):
     events = service.get_events_by_account(account_id, dt, step)
-    return []
+    return jsonify(events)
